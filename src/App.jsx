@@ -15,7 +15,11 @@ import {
   ChevronRight,
   Play,
   Settings,
-  Flame
+  Flame,
+  ArrowRight,
+  Loader2,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db, saveProspect, getProspects, saveSession } from './db';
@@ -52,22 +56,34 @@ const FLOW = [
   { key: "pitch", label: "Pitch & Close", color: "#2D8B46" },
 ];
 
-import { useRecorder, useAIEngine, useTranscription, useAudioVisualizer, useAnalytics } from './hooks';
+import { useRecorder, useAIEngine, useTranscription, useAudioVisualizer, useAnalytics, useSound, Embers, useDeepAnalysis } from './hooks';
 
 import { supabase } from './supabase';
 import Auth from './components/Auth';
 
 export default function App() {
   const [session, setSession] = useState(null);
+  const [theme, setTheme] = useState('dark');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [prospects, setProspects] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [currentSession, setCurrentSession] = useState(null);
   const [activeGate, setActiveGate] = useState('rapport');
+  const [aiPersonality, setAiPersonality] = useState('Strategist');
   const { isRecording, startRecording, stopRecording, audioUrl } = useRecorder();
-  const { insights, generateInsight } = useAIEngine();
+  const { insights, generateInsight } = useAIEngine(aiPersonality);
   const { transcript, startListening, stopListening, clearTranscript } = useTranscription();
   const { heatmap } = useAnalytics(sessions);
+  const { playSound } = useSound();
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+    playSound('click');
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -127,6 +143,15 @@ export default function App() {
     clearTranscript();
   };
 
+  useEffect(() => {
+    if (isRecording) {
+      const interval = setInterval(() => {
+        generateInsight(activeGate, transcript);
+      }, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [isRecording, activeGate, transcript]);
+
   const handleStopCall = () => {
     stopRecording();
     stopListening();
@@ -135,24 +160,45 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-[#0A0A0B] text-white overflow-hidden font-['Inter']">
+      <Embers />
       {/* Sidebar */}
-      <nav className="w-20 lg:w-64 border-r border-white/5 flex flex-col items-center lg:items-start p-6 glass">
-        <div className="flex items-center gap-3 mb-10 px-2">
-          <div className="w-10 h-10 bg-[#C0392B] rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(192,57,43,0.3)]">
-            <Flame size={24} fill="white" />
+      <nav className="w-20 lg:w-64 border-r border-white/5 flex flex-col items-center lg:items-start p-6 glass relative z-10">
+        <div className="flex items-center justify-between w-full mb-10 px-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#FF3B30] rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(255,59,48,0.3)]">
+              <Flame size={24} fill="white" />
+            </div>
+            <span className="text-xl font-bold font-['Outfit'] hidden lg:block tracking-tight">GATES OF HELL</span>
           </div>
-          <span className="text-xl font-bold font-['Outfit'] hidden lg:block tracking-tight">GATES OF HELL</span>
+          <button 
+            onClick={toggleTheme}
+            className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-[#A1A1AA] hover:text-white"
+          >
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
         </div>
 
         <div className="flex-1 w-full space-y-2">
-          <SidebarLink active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<LayoutDashboard size={20} />} label="Dashboard" />
-          <SidebarLink active={activeTab === 'prospects'} onClick={() => setActiveTab('prospects')} icon={<Users size={20} />} label="Prospect DB" />
-          <SidebarLink active={activeTab === 'training'} onClick={() => setActiveTab('training')} icon={<Award size={20} />} label="Battle Mode" />
+          <SidebarLink active={activeTab === 'dashboard'} onClick={() => { setActiveTab('dashboard'); playSound('click'); }} icon={<LayoutDashboard size={20} />} label="Dashboard" />
+          <SidebarLink active={activeTab === 'prospects'} onClick={() => { setActiveTab('prospects'); playSound('click'); }} icon={<Users size={20} />} label="Prospect DB" />
+          <SidebarLink active={activeTab === 'training'} onClick={() => { setActiveTab('training'); playSound('click'); }} icon={<Award size={20} />} label="Battle Mode" />
+          <SidebarLink active={activeTab === 'leaderboard'} onClick={() => { setActiveTab('leaderboard'); playSound('click'); }} icon={<TrendingUp size={20} />} label="Leaderboard" />
           <SidebarLink active={activeTab === 'live-call'} onClick={() => setActiveTab('live-call')} icon={<Mic size={20} />} label="Live Call" disabled={!isRecording} />
-          <SidebarLink active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<History size={20} />} label="Session History" />
         </div>
 
         <div className="w-full pt-6 border-t border-white/5 space-y-4">
+          <div className="px-4">
+            <label className="text-[9px] font-bold text-[#52525B] uppercase tracking-widest mb-2 block">AI Personality</label>
+            <select 
+              value={aiPersonality} 
+              onChange={(e) => setAiPersonality(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-xs focus:outline-none focus:border-[#FF3B30] transition-all"
+            >
+              <option value="Strategist">Strategist</option>
+              <option value="Drill Sergeant">Drill Sergeant</option>
+              <option value="The Closer">The Closer</option>
+            </select>
+          </div>
           <div className="px-4 py-2">
             <div className="text-[10px] font-bold text-[#62626C] uppercase tracking-widest mb-1">Signed in as</div>
             <div className="text-xs text-white truncate font-medium">{session.user.email}</div>
@@ -172,6 +218,7 @@ export default function App() {
           {activeTab === 'dashboard' && <Dashboard key="dash" onNewCall={startNewCall} prospects={prospects} loadData={loadData} heatmap={heatmap} />}
           {activeTab === 'prospects' && <ProspectDatabase key="prospects" prospects={prospects} onNewCall={startNewCall} />}
           {activeTab === 'training' && <ObjectionTraining key="training" />}
+          {activeTab === 'leaderboard' && <Leaderboard key="leaderboard" />}
           {activeTab === 'live-call' && <LiveCallInterface key="live" isRecording={isRecording} stopCall={handleStopCall} aiSuggestions={insights} activeGate={activeGate} setActiveGate={setActiveGate} transcript={transcript} />}
           {activeTab === 'analysis' && <PostCallAnalysis key="analysis" audioUrl={audioUrl} transcript={transcript} />}
         </AnimatePresence>
@@ -224,7 +271,7 @@ function Dashboard({ onNewCall, prospects, loadData, heatmap }) {
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="p-8 lg:p-12 max-w-6xl mx-auto w-full">
       <header className="flex justify-between items-end mb-12">
         <div>
-          <h1 className="text-4xl font-bold font-['Outfit'] mb-2">Welcome Back, Closer</h1>
+          <h1 className="text-4xl font-bold font-['Outfit'] mb-2 premium-gradient-text">Welcome Back, Closer</h1>
           <p className="text-[#94949E]">The gates are waiting. {prospects.length} targets in the pipeline.</p>
         </div>
         <button 
@@ -515,92 +562,143 @@ function LiveCallInterface({ isRecording, stopCall, aiSuggestions, activeGate, s
 }
 
 function PostCallAnalysis({ audioUrl, transcript }) {
+  const { analyzeConversation, analyzing, solution } = useDeepAnalysis();
+  const { playSound } = useSound();
+
   const exportCRM = () => {
+    playSound('click');
     const content = `
-# Gates of Hell: Sales Session Analysis
-Date: ${new Date().toLocaleDateString()}
+# Gates of Hell: Strategic Solution Report
 Prospect: John Doe
+Strategy: ${solution?.solutionArchitecture || 'Standard Close'}
 
-## Summary
-The prospect is highly qualified on Need, but Budget is an allocation hurdle.
+## Strategic Analysis
+${solution?.strategicHook || 'N/A'}
 
-## AI Insights
-- Masterful Rapport
-- Gate 1 Clear (15/day)
-- Strong Mirroring
-
-## Areas for Improvement
-- Gate 2 Rush (Decision Maker)
-- Objection Handling (Defensiveness)
-
-## Transcript
+## Transcript Analysis
 ${transcript.map(t => `[${t.role.toUpperCase()}] ${t.text}`).join('\n')}
     `;
     const blob = new Blob([content], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `session-report-${Date.now()}.md`;
+    a.download = `strategic-solution-${Date.now()}.md`;
     a.click();
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-12 max-w-4xl mx-auto w-full">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-12 max-w-5xl mx-auto w-full relative z-10">
       <header className="mb-12 flex justify-between items-start">
         <div>
           <div className="flex items-center gap-3 mb-4">
-            <div className="px-3 py-1 rounded-full bg-green-500/10 text-green-400 text-xs font-bold">SESSION COMPLETE</div>
-            <span className="text-[#62626C] text-xs font-bold">APRIL 24, 2026 · 14:22</span>
+            <div className="px-3 py-1 rounded-full bg-green-500/10 text-green-400 text-xs font-bold tracking-widest uppercase">Analysis Mode</div>
+            <span className="text-[#52525B] text-xs font-bold">SESSION ID: #GH-${Math.floor(Math.random()*10000)}</span>
           </div>
-          <h1 className="text-4xl font-bold font-['Outfit']">Analysis: John Doe</h1>
+          <h1 className="text-5xl font-bold font-['Outfit'] premium-gradient-text">Personalized Close Plan</h1>
         </div>
         <div className="flex gap-4">
-          {audioUrl && (
-            <audio controls src={audioUrl} className="h-10 opacity-60 hover:opacity-100 transition-opacity" />
-          )}
-          <button className="p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all border border-white/10">
-            <History size={20} />
+          <button 
+            onClick={() => { analyzeConversation(transcript, "John Doe"); playSound('gate'); }}
+            disabled={analyzing}
+            className="px-6 py-3 rounded-xl bg-[#FF3B30] text-white font-bold flex items-center gap-2 hover:shadow-[0_0_20px_rgba(255,59,48,0.4)] transition-all disabled:opacity-50"
+          >
+            {analyzing ? <Loader2 className="animate-spin" size={18} /> : <Brain size={18} />}
+            {analyzing ? 'Architecting...' : 'Generate Solution'}
           </button>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-        <div className="p-8 rounded-3xl border border-white/5 glass space-y-6">
-          <h3 className="text-xl font-bold flex items-center gap-2">
-            <Award className="text-green-400" size={24} />
-            What Went Well
-          </h3>
-          <ul className="space-y-4">
-            <AnalysisItem text="Masterful Rapport: You connected on their industry pain points immediately." />
-            <AnalysisItem text="Gate 1 Clear: You pinned down the EXACT lead volume they need (15/day)." />
-            <AnalysisItem text="Strong Mirroring: You used their language 'expensive vs investment' effectively." />
-          </ul>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+        {/* Solution Map */}
+        <div className="lg:col-span-2 p-8 rounded-3xl border border-white/5 glass relative overflow-hidden">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-xl font-bold flex items-center gap-2">
+              <TrendingUp className="text-[#FF3B30]" size={24} />
+              Strategic Alignment Map
+            </h3>
+            <span className="text-[10px] font-bold text-[#52525B] uppercase tracking-widest">Pain vs. Solution</span>
+          </div>
+
+          <div className="space-y-8 relative">
+            <div className="absolute left-[39px] top-4 bottom-4 w-px bg-white/5" />
+            
+            <AlignmentPoint 
+              label="The Pain" 
+              icon={<ShieldAlert size={16} />} 
+              color="#FF3B30"
+              content={solution?.painPoints[0] || "Awaiting Analysis..."} 
+            />
+            <AlignmentPoint 
+              label="The Solution" 
+              icon={<Brain size={16} />} 
+              color="#BF5AF2"
+              content={solution?.solutionArchitecture || "Awaiting Analysis..."} 
+            />
+            <AlignmentPoint 
+              label="The Value" 
+              icon={<Award size={16} />} 
+              color="#FF9F0A"
+              content={solution?.personalizedValue || "Awaiting Analysis..."} 
+            />
+          </div>
         </div>
 
-        <div className="p-8 rounded-3xl border border-white/5 glass space-y-6">
-          <h3 className="text-xl font-bold flex items-center gap-2">
-            <AlertCircle className="text-yellow-400" size={24} />
-            Areas for Improvement
-          </h3>
-          <ul className="space-y-4">
-            <AnalysisItem text="Gate 2 Rush: You jumped to budget before confirming the decision maker's name." />
-            <AnalysisItem text="Objection Handling: When they mentioned 'cheaper options', you got defensive. Try the G3 mirror instead." />
-            <AnalysisItem text="Pacing: You spoke 15% more than the prospect. Slow down." />
-          </ul>
+        {/* Quick Stats */}
+        <div className="space-y-6">
+          <div className="p-6 rounded-3xl border border-white/5 glass">
+            <h4 className="text-xs font-bold text-[#52525B] uppercase tracking-widest mb-4">Conversation Pacing</h4>
+            <div className="flex items-end gap-2 h-20 mb-4">
+              {[40, 70, 45, 90, 60, 80, 50].map((h, i) => (
+                <div key={i} className="flex-1 bg-white/5 rounded-t-sm relative group">
+                  <div style={{ height: `${h}%` }} className="absolute bottom-0 inset-x-0 bg-[#FF3B30] opacity-40 group-hover:opacity-100 transition-opacity" />
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between text-[10px] font-bold text-[#52525B]">
+              <span>RAPPORT</span>
+              <span>CLOSE</span>
+            </div>
+          </div>
+
+          <div className="p-6 rounded-3xl border border-[#FF3B30]/20 bg-[#FF3B30]/5">
+            <h4 className="text-xs font-bold text-[#FF3B30] uppercase tracking-widest mb-2">The Strategic Hook</h4>
+            <p className="text-sm leading-relaxed text-[#A1A1AA]">
+              {solution?.strategicHook || "Generate a solution to find the psychological leverage point for this deal."}
+            </p>
+          </div>
         </div>
       </div>
 
-      <div className="p-8 rounded-3xl border border-white/5 bg-[#C0392B]/5 border-[#C0392B]/10">
-        <h3 className="text-xl font-bold mb-4 font-['Outfit'] text-[#C0392B]">AI Summary & Next Steps</h3>
-        <p className="text-[#94949E] leading-relaxed mb-6">
-          The prospect is highly qualified on Need, but Budget is an allocation hurdle. In the next call, focus on the 'Cost of Inaction' — specifically the $12k they're losing monthly by not hitting their lead target. You successfully identified the pain, now use it to unlock the budget allocation.
-        </p>
-        <div className="flex gap-4">
-          <button className="px-8 py-4 bg-[#C0392B] rounded-xl font-bold flex-1">Schedule Follow-up</button>
-          <button onClick={exportCRM} className="px-8 py-4 bg-white/5 border border-white/10 rounded-xl font-bold flex-1">Export to CRM (.md)</button>
+      <div className="p-8 rounded-3xl border border-white/5 glass bg-gradient-to-br from-[#0D0D0F] to-transparent">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-bold font-['Outfit']">Next Strategic Steps</h3>
+          <button onClick={exportCRM} className="text-xs text-[#FF3B30] font-bold hover:underline">Export Full Strategy</button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <button className="p-6 rounded-2xl bg-white text-black font-bold flex items-center justify-between group hover:bg-white/90 transition-all">
+            <span>Schedule Follow-up Call</span>
+            <ArrowRight className="group-hover:translate-x-1 transition-transform" />
+          </button>
+          <button className="p-6 rounded-2xl bg-white/5 border border-white/10 font-bold hover:bg-white/10 transition-all">
+            Send Personalized Proposal
+          </button>
         </div>
       </div>
     </motion.div>
+  );
+}
+
+function AlignmentPoint({ label, icon, color, content }) {
+  return (
+    <div className="flex gap-6 relative group">
+      <div className="w-10 h-10 rounded-full flex items-center justify-center relative z-10 shadow-xl" style={{ backgroundColor: color }}>
+        {icon}
+      </div>
+      <div className="flex-1 pt-1">
+        <div className="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-40" style={{ color: color }}>{label}</div>
+        <div className="text-lg font-medium group-hover:text-white transition-colors">{content}</div>
+      </div>
+    </div>
   );
 }
 
@@ -650,6 +748,7 @@ function ProspectDatabase({ prospects, onNewCall }) {
 function ObjectionTraining() {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [showHandle, setShowHandle] = useState(false);
+  const { playSound } = useSound();
   
   const allObjections = [
     { obj: "We need 360 marketing (but you only do one thing)", handle: "We don't do 360, we only do [X]. Why are you looking for 360 specifically?", gate: "G1" },
@@ -660,15 +759,27 @@ function ObjectionTraining() {
 
   const current = allObjections[currentIdx];
 
+  const speak = (text) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.9;
+    utterance.pitch = 0.8;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  useEffect(() => {
+    speak(current.obj);
+  }, [currentIdx]);
+
   const next = () => {
+    playSound('click');
     setCurrentIdx((currentIdx + 1) % allObjections.length);
     setShowHandle(false);
   };
 
   return (
-    <div className="p-12 max-w-2xl mx-auto w-full h-full flex flex-col justify-center">
+    <div className="p-12 max-w-2xl mx-auto w-full h-full flex flex-col justify-center relative z-10">
       <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold font-['Outfit'] mb-4">Objection Battle Mode</h1>
+        <h1 className="text-4xl font-bold font-['Outfit'] mb-4 premium-gradient-text">Objection Battle Mode</h1>
         <p className="text-[#94949E]">Master the handles. Clear the gates.</p>
       </div>
 
@@ -689,14 +800,14 @@ function ObjectionTraining() {
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-6 rounded-2xl bg-[#C0392B]/10 border border-[#C0392B]/20 text-[#C0392B] font-medium leading-relaxed"
+              className="p-6 rounded-2xl bg-[#FF3B30]/10 border border-[#FF3B30]/20 text-[#FF3B30] font-medium leading-relaxed"
             >
               <div className="text-[10px] font-bold uppercase mb-2 opacity-60">The Handle</div>
               {current.handle}
             </motion.div>
           ) : (
             <button 
-              onClick={() => setShowHandle(true)}
+              onClick={() => { setShowHandle(true); playSound('gate'); }}
               className="py-4 px-8 rounded-xl bg-white text-black font-bold hover:scale-105 transition-transform"
             >
               Reveal Handle
@@ -709,6 +820,53 @@ function ObjectionTraining() {
         <button onClick={next} className="p-4 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all">
           <ChevronRight size={24} />
         </button>
+      </div>
+    </div>
+  );
+}
+
+function Leaderboard() {
+  const players = [
+    { name: "Jordan 'The Shark'", closed: 42, rate: "92%", points: 12500 },
+    { name: "Sarah 'The Closer'", closed: 38, rate: "88%", points: 11200 },
+    { name: "You (Karthikeya)", closed: 31, rate: "85%", points: 9400, active: true },
+    { name: "Mike 'The Wolf'", closed: 29, rate: "79%", points: 8800 },
+    { name: "Alex 'The Strategist'", closed: 25, rate: "75%", points: 7500 },
+  ];
+
+  return (
+    <div className="p-12 max-w-4xl mx-auto w-full relative z-10">
+      <header className="mb-12">
+        <h1 className="text-4xl font-bold font-['Outfit'] mb-2 premium-gradient-text">Global Leaderboard</h1>
+        <p className="text-[#94949E]">Competing with the top 1% of closers worldwide.</p>
+      </header>
+
+      <div className="rounded-3xl border border-white/5 glass overflow-hidden">
+        {players.map((p, i) => (
+          <motion.div 
+            initial={{ x: -20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: i * 0.1 }}
+            key={i} 
+            className={`flex items-center gap-6 p-6 border-b border-white/5 hover:bg-white/5 transition-all ${p.active ? 'bg-white/5' : ''}`}
+          >
+            <div className="text-2xl font-bold w-8 text-[#52525B]">#{i + 1}</div>
+            <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center font-bold text-lg">
+              {p.name[0]}
+            </div>
+            <div className="flex-1">
+              <div className="font-bold flex items-center gap-2">
+                {p.name}
+                {p.active && <span className="text-[10px] bg-[#FF3B30] px-2 py-0.5 rounded uppercase">You</span>}
+              </div>
+              <div className="text-xs text-[#52525B]">{p.closed} Gates Closed · {p.rate} Win Rate</div>
+            </div>
+            <div className="text-right">
+              <div className="text-xl font-bold text-[#FF3B30]">{p.points}</div>
+              <div className="text-[10px] font-bold text-[#52525B] uppercase tracking-widest">Points</div>
+            </div>
+          </motion.div>
+        ))}
       </div>
     </div>
   );

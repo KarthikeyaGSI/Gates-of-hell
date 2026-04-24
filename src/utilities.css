@@ -59,6 +59,18 @@
 .border-l { border-left-width: 1px; }
 .border-t { border-top-width: 1px; }
 .border { border-width: 1px; }
+.text-white { color: #ffffff; }
+.text-black { color: #000000; }
+.text-[#94949E] { color: #A1A1AA; }
+.text-[#62626C] { color: #52525B; }
+.bg-[#C0392B] { background-color: #FF3B30; }
+.border-[#C0392B] { border-color: #FF3B30; }
+.shadow-[0_0_20px_rgba(192,57,43,0.3)] { box-shadow: 0 0 20px rgba(255, 59, 48, 0.2); }
+.shadow-[0_0_10px_rgba(192,57,43,1)] { box-shadow: 0 0 10px rgba(255, 59, 48, 0.8); }
+.bg-[#C0392B]\/10 { background-color: rgba(255, 59, 48, 0.1); }
+.bg-[#C0392B]\/5 { background-color: rgba(255, 59, 48, 0.05); }
+.border-[#C0392B]\/20 { border-color: rgba(255, 59, 48, 0.2); }
+.border-[#C0392B]\/10 { border-color: rgba(255, 59, 48, 0.1); }
 .border-white\/5 { border-color: rgba(255, 255, 255, 0.05); }
 .border-white\/10 { border-color: rgba(255, 255, 255, 0.1); }
 .rounded-xl { border-radius: 0.75rem; }

@@ -40,42 +40,46 @@ export const useRecorder = () => {
   return { isRecording, startRecording, stopRecording, audioUrl };
 };
 
-export const useAIEngine = () => {
+export const useAIEngine = (personality) => {
   const [insights, setInsights] = useState([]);
 
-  const generateInsight = (gate) => {
-    const tips = {
-      rapport: [
-        "Mirror their tone — they seem professional but approachable.",
-        "They mentioned a specific pain point about 'scaling'. Lean into that.",
-        "Acknowledge their expertise before diving into the gate."
-      ],
-      g1: [
-        "Ask about the 'Expected Outcome' again. They were a bit vague.",
-        "They mentioned 'leads' but not 'quality'. Clarify the definition of a lead.",
-        "Math check: If they spend $2k and want 50 leads, that's $40/lead. Is that realistic?"
-      ],
-      g2: [
-        "Timeline seems urgent, but check if the 'decision maker' is actually on vacation.",
-        "Ask what happens if they DON'T start by next month.",
-        "Identify the 'Approval Process' bottleneck now."
-      ],
-      g3: [
-        "They balked at the 'range'. Go back to Value Gap.",
-        "Allocation vs Capacity: It sounds like they HAVE the money but DON'T want to spend it yet.",
-        "Anchor to the $10k loss they mentioned in Gate 1."
-      ]
-    };
+  const generateInsight = (gate, transcript) => {
+    const lastWords = transcript.slice(-1)[0]?.text?.toLowerCase() || "";
+    let tip = "";
 
-    const randomTip = tips[gate][Math.floor(Math.random() * tips[gate].length)];
-    const newInsight = {
-      id: Date.now(),
-      type: 'tip',
-      text: randomTip,
-      gate
-    };
+    if (lastWords.includes("price") || lastWords.includes("cost")) {
+      tip = `[${personality}] Objection Detected: Avoid defending the price. Ask about the 'Cost of Inaction' instead.`;
+    } else if (lastWords.includes("later") || lastWords.includes("next month")) {
+      tip = `[${personality}] Urgency Gap: They are pushing to G2. Pivot back to G1 to reinforce the Pain.`;
+    } else {
+      const tips = {
+        rapport: [
+          `[${personality}] Mirror their tone — they seem professional but approachable.`,
+          `[${personality}] They mentioned a specific pain point about 'scaling'. Lean into that.`,
+          `[${personality}] Acknowledge their expertise before diving into the gate.`
+        ],
+        g1: [
+          `[${personality}] Ask about the 'Expected Outcome' again. They were a bit vague.`,
+          `[${personality}] They mentioned 'leads' but not 'quality'. Clarify the definition of a lead.`,
+          `[${personality}] Math check: If they spend $2k and want 50 leads, that's $40/lead. Is that realistic?`
+        ],
+        g2: [
+          `[${personality}] Timeline seems urgent, but check if the 'decision maker' is actually on vacation.`,
+          `[${personality}] Ask what happens if they DON'T start by next month.`,
+          `[${personality}] Identify the 'Approval Process' bottleneck now.`
+        ],
+        g3: [
+          `[${personality}] They balked at the 'range'. Go back to Value Gap.`,
+          `[${personality}] Allocation vs Capacity: It sounds like they HAVE the money but DON'T want to spend it yet.`,
+          `[${personality}] Anchor to the $10k loss they mentioned in Gate 1.`
+        ]
+      };
+      const gateTips = tips[gate] || tips.rapport;
+      tip = gateTips[Math.floor(Math.random() * gateTips.length)];
+    }
 
-    setInsights(prev => [newInsight, ...prev.slice(0, 4)]);
+    const newInsight = { id: Date.now(), text: tip };
+    setInsights(prev => [newInsight, ...prev].slice(0, 3));
   };
 
   return { insights, generateInsight };
@@ -183,4 +187,93 @@ export const useAnalytics = (sessions) => {
   }, [sessions]);
 
   return { heatmap };
+};
+
+export const useDeepAnalysis = () => {
+  const [analyzing, setAnalyzing] = useState(false);
+  const [solution, setSolution] = useState(null);
+
+  const analyzeConversation = async (transcript, prospectName) => {
+    setAnalyzing(true);
+    // Simulate a deep API call (e.g. OpenAI/Gemini)
+    // In a real app, you'd fetch from your edge function here
+    await new Promise(r => setTimeout(r, 2000));
+    
+    const analysis = {
+      painPoints: ["Scaling bottleneck in Lead Gen", "High CAC from manual outreach"],
+      personalizedValue: `For ${prospectName}, we move from $45/lead to $12/lead by automating Gate 1 validation.`,
+      solutionArchitecture: "Automated Lead Funnel + AI Vetting Layer",
+      strategicHook: "By not implementing this, you are burning $4k/month in manual labor costs."
+    };
+    
+    setSolution(analysis);
+    setAnalyzing(false);
+    return analysis;
+  };
+
+  return { analyzeConversation, analyzing, solution };
+};
+
+export const useSound = () => {
+  const playSound = (type) => {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    if (type === 'success') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.5);
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+    } else if (type === 'gate') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(220, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.2);
+      gain.gain.setValueAtTime(0.05, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+    } else if (type === 'click') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(150, ctx.currentTime);
+      gain.gain.setValueAtTime(0.02, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+    }
+
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+  };
+
+  return { playSound };
+};
+
+export const Embers = () => {
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+      {[...Array(20)].map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute bg-[#FF3B30] rounded-full blur-[1px] opacity-20"
+          initial={{ 
+            x: Math.random() * window.innerWidth, 
+            y: window.innerHeight + 10,
+            width: Math.random() * 3 + 1,
+            height: Math.random() * 3 + 1
+          }}
+          animate={{ 
+            y: -100,
+            x: `calc(${Math.random() * 100}vw + ${Math.sin(i) * 50}px)`,
+            opacity: [0, 0.2, 0]
+          }}
+          transition={{ 
+            duration: Math.random() * 10 + 10, 
+            repeat: Infinity, 
+            delay: Math.random() * 20 
+          }}
+        />
+      ))}
+    </div>
+  );
 };
