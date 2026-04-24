@@ -15,9 +15,12 @@ export default function Auth() {
     setLoading(true);
     setError(null);
 
+    const cleanEmail = email.trim();
+    const cleanPassword = password.trim();
+
     const { error } = isSignUp 
-      ? await supabase.auth.signUp({ email, password })
-      : await supabase.auth.signInWithPassword({ email, password });
+      ? await supabase.auth.signUp({ email: cleanEmail, password: cleanPassword })
+      : await supabase.auth.signInWithPassword({ email: cleanEmail, password: cleanPassword });
 
     if (error) setError(error.message);
     setLoading(false);
@@ -99,13 +102,18 @@ export default function Auth() {
           </button>
         </form>
 
-        <div className="mt-8 text-center">
+        <div className="mt-8 text-center space-y-4">
           <button 
             onClick={() => setIsSignUp(!isSignUp)}
             className="text-xs text-[#62626C] hover:text-white transition-colors"
           >
             {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Create one"}
           </button>
+
+          <div className="pt-4 border-t border-white/5 text-[10px] text-[var(--text-muted)] leading-relaxed italic">
+            Tip: If signing up for the first time, check your email for a confirmation link. 
+            Login will not work until the email is verified.
+          </div>
         </div>
       </motion.div>
     </div>
