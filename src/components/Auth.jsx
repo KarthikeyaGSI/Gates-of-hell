@@ -36,25 +36,25 @@ export default function Auth() {
         className="w-full max-w-md glass p-10 rounded-3xl border border-white/10 relative z-10"
       >
         <div className="flex flex-col items-center mb-10">
-          <div className="w-16 h-16 bg-[#C0392B] rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(192,57,43,0.4)] mb-6">
+          <div className="w-16 h-16 bg-[var(--brand)] rounded-2xl flex items-center justify-center shadow-[0_0_30px_var(--brand-glow)] mb-6">
             <Flame size={36} fill="white" />
           </div>
-          <h1 className="text-3xl font-bold font-['Outfit'] tracking-tight">Gates of Hell</h1>
-          <p className="text-[#94949E] mt-2 text-center">
+          <h1 className="text-3xl font-bold font-['Outfit'] tracking-tight text-[var(--text)]">Gates of Hell</h1>
+          <p className="text-[var(--text-secondary)] mt-2 text-center text-sm">
             {isSignUp ? 'Create your closer account' : 'Welcome back, master of the gates'}
           </p>
         </div>
 
         <form onSubmit={handleAuth} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-[#62626C] uppercase tracking-widest ml-1">Email Address</label>
+            <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest ml-1">Email Address</label>
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-[#62626C]" size={18} />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={18} />
               <input 
                 type="email" 
                 required
                 placeholder="you@company.com"
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:border-[#C0392B] transition-all"
+                className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:border-[var(--brand)] transition-all text-[var(--text)]"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -62,14 +62,14 @@ export default function Auth() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-[#62626C] uppercase tracking-widest ml-1">Password</label>
+            <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest ml-1">Password</label>
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-[#62626C]" size={18} />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={18} />
               <input 
                 type="password" 
                 required
                 placeholder="••••••••"
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:border-[#C0392B] transition-all"
+                className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:border-[var(--brand)] transition-all text-[var(--text)]"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
