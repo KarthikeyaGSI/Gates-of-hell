@@ -54,7 +54,11 @@ const FLOW = [
 
 import { useRecorder, useAIEngine, useTranscription, useAudioVisualizer, useAnalytics } from './hooks';
 
+import { supabase } from './supabase';
+import Auth from './components/Auth';
+
 export default function App() {
+  const [session, setSession] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [prospects, setProspects] = useState([]);
   const [sessions, setSessions] = useState([]);
@@ -66,20 +70,55 @@ export default function App() {
   const { heatmap } = useAnalytics(sessions);
 
   useEffect(() => {
-    loadData();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (session) {
+      loadData();
+    }
+  }, [session]);
+
   const loadData = async () => {
-    const [p, s] = await Promise.all([
-      getProspects(),
-      db.sessions.toArray()
-    ]);
-    setProspects(p);
-    setSessions(s);
+    // If Supabase is configured, fetch from cloud, otherwise fallback to Dexie
+    if (import.meta.env.VITE_SUPABASE_URL !== 'https://your-project.supabase.co') {
+      const { data: p } = await supabase.from('prospects').select('*').order('createdAt', { ascending: false });
+      const { data: s } = await supabase.from('sessions').select('*');
+      if (p) setProspects(p);
+      if (s) setSessions(s);
+    } else {
+      const [p, s] = await Promise.all([
+        getProspects(),
+        db.sessions.toArray()
+      ]);
+      setProspects(p);
+      setSessions(s);
+    }
   };
 
+  if (!session) return <Auth />;
+
   const startNewCall = async (prospectId) => {
-    const sessionId = await saveSession(prospectId);
+    let sessionId;
+    if (import.meta.env.VITE_SUPABASE_URL !== 'https://your-project.supabase.co') {
+      const { data, error } = await supabase.from('sessions').insert([{ 
+        prospect_id: prospectId, 
+        user_id: session.user.id,
+        status: 'ongoing' 
+      }]).select();
+      if (data) sessionId = data[0].id;
+    } else {
+      sessionId = await saveSession(prospectId);
+    }
+    
     setCurrentSession(sessionId);
     startRecording();
     startListening();
@@ -113,8 +152,17 @@ export default function App() {
           <SidebarLink active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<History size={20} />} label="Session History" />
         </div>
 
-        <div className="w-full pt-6 border-t border-white/5 space-y-2">
-          <SidebarLink active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings size={20} />} label="AI Settings" />
+        <div className="w-full pt-6 border-t border-white/5 space-y-4">
+          <div className="px-4 py-2">
+            <div className="text-[10px] font-bold text-[#62626C] uppercase tracking-widest mb-1">Signed in as</div>
+            <div className="text-xs text-white truncate font-medium">{session.user.email}</div>
+          </div>
+          <button 
+            onClick={() => supabase.auth.signOut()}
+            className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-all text-sm font-bold"
+          >
+            Sign Out
+          </button>
         </div>
       </nav>
 
@@ -156,7 +204,17 @@ function Dashboard({ onNewCall, prospects, loadData, heatmap }) {
 
   const handleAdd = async () => {
     if (!name) return;
-    await saveProspect(name);
+    
+    if (import.meta.env.VITE_SUPABASE_URL !== 'https://your-project.supabase.co') {
+      const { error } = await supabase.from('prospects').insert([{ 
+        name, 
+        user_id: (await supabase.auth.getUser()).data.user.id 
+      }]);
+      if (error) console.error(error);
+    } else {
+      await saveProspect(name);
+    }
+    
     setName('');
     setIsAdding(false);
     loadData();
